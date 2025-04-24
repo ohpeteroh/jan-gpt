@@ -15,11 +15,11 @@ from langchain_community.utilities import SerpAPIWrapper
 from langchain_community.tools import Tool
 from langchain_core.tools import Tool as BaseTool
 
-# 🔐 Secrets
+# 🔐 Secrets 불러오기
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 SERPAPI_API_KEY = st.secrets["SERPAPI_API_KEY"]
 
-# 🔧 초기화
+# LangChain 구성 요소 초기화
 embedding = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
 llm = ChatOpenAI(model="gpt-4", temperature=0.2, openai_api_key=OPENAI_API_KEY)
 search = SerpAPIWrapper(serpapi_api_key=SERPAPI_API_KEY)
@@ -31,7 +31,7 @@ search_tool: BaseTool = Tool(
 splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
 DB_PATH = "faiss_index"
 
-# 📂 파일 업로드 및 분석 함수
+# 파일 로딩 및 벡터화 함수
 def load_and_split_file(tmp_path, suffix):
     docs = []
     if suffix == ".txt":
@@ -72,7 +72,7 @@ def load_and_split_file(tmp_path, suffix):
     db.save_local(DB_PATH)
     return True
 
-# 🌐 Streamlit UI 시작
+# Streamlit UI
 st.set_page_config(page_title="Jan GPT", layout="wide")
 st.title("📂 Jan GPT - 파일 기반 검색 & 리서치 AI")
 
