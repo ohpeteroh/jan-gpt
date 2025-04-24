@@ -2,7 +2,7 @@ streamlit
 langchain>=0.1.14
 langchain-community>=0.0.20
 langchain-openai>=0.0.5
-duckduckgo-search>=1.0.1
+duckduckgo-search==1.1.2
 openai
 pandas
 python-docx
