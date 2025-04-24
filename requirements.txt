@@ -1,6 +1,7 @@
 streamlit
 langchain>=0.1.14
 langchain-community>=0.0.20
+langchain-openai>=0.0.5
 openai
 pandas
 python-docx
