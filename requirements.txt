@@ -1,9 +1,8 @@
 streamlit
-langchain
+langchain>=0.1.14
 openai
 pandas
 python-docx
 python-pptx
-pytesseract
 pyxlsb
 olefile
