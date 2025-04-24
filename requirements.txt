@@ -1,0 +1,9 @@
+streamlit
+langchain
+openai
+pandas
+python-docx
+python-pptx
+pytesseract
+pyxlsb
+olefile
