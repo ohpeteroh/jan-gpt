@@ -9,3 +9,4 @@ python-docx
 python-pptx
 pyxlsb
 olefile
+google-search-results
