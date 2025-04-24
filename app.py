@@ -11,18 +11,27 @@ from langchain.docstore.document import Document
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain_community.document_loaders import TextLoader, PyPDFLoader, UnstructuredWordDocumentLoader
-from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_community.utilities import SerpAPIWrapper
+from langchain_community.tools import Tool
+from langchain_core.tools import Tool as BaseTool
 
-# 🔐 API 및 초기 설정
-OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", "sk-...")
+# 🔐 Secrets
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+SERPAPI_API_KEY = st.secrets["SERPAPI_API_KEY"]
+
+# 🔧 초기화
 embedding = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
 llm = ChatOpenAI(model="gpt-4", temperature=0.2, openai_api_key=OPENAI_API_KEY)
-search_tool = DuckDuckGoSearchRun()
+search = SerpAPIWrapper(serpapi_api_key=SERPAPI_API_KEY)
+search_tool: BaseTool = Tool(
+    name="Google Search",
+    description="Search the internet using Google via SerpAPI",
+    func=search.run,
+)
 splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
 DB_PATH = "faiss_index"
 
-# 📄 다양한 파일 로딩
+# 📂 파일 업로드 및 분석 함수
 def load_and_split_file(tmp_path, suffix):
     docs = []
     if suffix == ".txt":
@@ -30,8 +39,10 @@ def load_and_split_file(tmp_path, suffix):
             text = f.read()
         docs = [Document(page_content=text)]
     elif suffix == ".pdf":
+        from langchain_community.document_loaders import PyPDFLoader
         docs = PyPDFLoader(tmp_path).load()
     elif suffix == ".docx":
+        from langchain_community.document_loaders import UnstructuredWordDocumentLoader
         docs = UnstructuredWordDocumentLoader(tmp_path).load()
     elif suffix == ".pptx":
         prs = Presentation(tmp_path)
@@ -61,14 +72,12 @@ def load_and_split_file(tmp_path, suffix):
     db.save_local(DB_PATH)
     return True
 
-# 🚀 Streamlit 인터페이스
+# 🌐 Streamlit UI 시작
 st.set_page_config(page_title="Jan GPT", layout="wide")
 st.title("📂 Jan GPT - 파일 기반 검색 & 리서치 AI")
 
-uploaded_file = st.file_uploader(
-    "📤 파일 업로드 (.txt, .pdf, .docx, .pptx, .hwp, .xlsx, .xlsm, .xlsb, .csv)",
-    type=["txt", "pdf", "docx", "pptx", "hwp", "xlsx", "xlsm", "xlsb", "csv"]
-)
+uploaded_file = st.file_uploader("📤 파일 업로드 (.txt, .pdf, .docx, .pptx, .hwp, .xlsx, .xlsm, .xlsb, .csv)",
+                                 type=["txt", "pdf", "docx", "pptx", "hwp", "xlsx", "xlsm", "xlsb", "csv"])
 
 if uploaded_file:
     suffix = Path(uploaded_file.name).suffix.lower()
@@ -88,7 +97,8 @@ if query:
         docs = db.similarity_search(query, k=5)
         doc_context = "\n\n".join([doc.page_content for doc in docs])
     else:
-        doc_context = "(문서가 없습니다)"
+        doc_context = "(문서 없음)"
+
     web_results = search_tool.run(query)
 
     if search_mode == "심층 리서치":
@@ -99,10 +109,10 @@ if query:
 [웹 검색 정보]
 {web_results}
 
-이 정보를 바탕으로 질문 '{query}'에 대해 다음 항목을 포함하여 심층 분석 보고서를 작성해주세요:
+위 정보를 바탕으로 '{query}'에 대해 다음 항목을 포함한 심층 분석 보고서를 작성해주세요:
 1. 핵심 요약
 2. 주요 근거 및 배경 정보
-3. 전략적 시사점 및 조언
+3. 전략적 시사점 및 제언
 """
     else:
         prompt = f"""
@@ -114,6 +124,7 @@ if query:
 
 위 정보를 바탕으로 '{query}'에 답변해 주세요.
 """
+
     response = llm.invoke(prompt)
     st.markdown("### 💬 GPT 응답")
     st.write(response.content)
