@@ -2,10 +2,14 @@ streamlit
 langchain>=0.1.14
 langchain-community>=0.0.20
 langchain-openai>=0.0.5
-google-search-results
 openai
 pandas
 python-docx
 python-pptx
 pyxlsb
 olefile
+pytesseract
+pdf2image
+Pillow
+duckduckgo-search==7.5.5
+opencv-python
