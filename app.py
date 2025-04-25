@@ -1,5 +1,4 @@
-# 코드 실행 상태 초기화로 인해 다시 생성
-app_code_full = '''import os
+import os
 import tempfile
 from pathlib import Path
 import streamlit as st
@@ -19,7 +18,6 @@ from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 # 🔐 API Key
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
-# LangChain 세팅
 embedding = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
 llm = ChatOpenAI(model="gpt-4", temperature=0.2, openai_api_key=OPENAI_API_KEY)
 splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
@@ -38,7 +36,7 @@ def load_and_split_file(tmp_path, suffix):
         docs = UnstructuredWordDocumentLoader(tmp_path).load()
     elif suffix == ".pptx":
         prs = Presentation(tmp_path)
-        text = "\\n".join([shape.text for slide in prs.slides for shape in slide.shapes if hasattr(shape, "text")])
+        text = "\n".join([shape.text for slide in prs.slides for shape in slide.shapes if hasattr(shape, "text")])
         docs = [Document(page_content=text)]
     elif suffix == ".hwp":
         result = subprocess.run(['hwp5txt', tmp_path], stdout=subprocess.PIPE, encoding='utf-8')
@@ -49,9 +47,9 @@ def load_and_split_file(tmp_path, suffix):
     elif suffix == ".xlsb":
         with pyxlsb.open_workbook(tmp_path) as wb:
             sheet = wb.get_sheet(1)
-            data = "\\n".join(["\\t".join([str(cell.v) for cell in row]) for row in sheet.rows()])
+            data = "\n".join(["\t".join([str(cell.v) for cell in row]) for row in sheet.rows()])
         docs = [Document(page_content=data)]
-    elif suffix == ".csv":
+    elif suffix in [".csv"]:
         df = pd.read_csv(tmp_path)
         docs = [Document(page_content=df.to_string())]
     elif suffix in [".png", ".jpg", ".jpeg"]:
@@ -70,7 +68,6 @@ def load_and_split_file(tmp_path, suffix):
     db.save_local(DB_PATH)
     return True
 
-# Streamlit UI
 st.set_page_config(page_title="Jan GPT", layout="wide")
 st.title("📂 Jan GPT - 문서 + 이미지 + 웹 검색 기반 리서치 GPT")
 
@@ -94,7 +91,7 @@ if query:
         if os.path.exists(DB_PATH):
             db = FAISS.load_local(DB_PATH, embedding)
             docs = db.similarity_search(query, k=5)
-            doc_context = "\\n\\n".join([doc.page_content for doc in docs])
+            doc_context = "\n\n".join([doc.page_content for doc in docs])
         else:
             doc_context = "(문서 없음)"
 
@@ -104,19 +101,19 @@ if query:
             try:
                 ddgs = DDGS()
                 results = ddgs.text(query, max_results=5)
-                web_results = "\\n".join([r["body"] for r in results])
+                web_results = "\n".join([r["body"] for r in results])
             except Exception as e:
                 web_results = f"(웹 검색 실패: {e})"
 
         # 프롬프트 구성
-        prompt = f"[문서 기반 정보]\\n{doc_context}\\n"
+        prompt = f"[문서 기반 정보]\n{doc_context}\n"
         if use_web:
-            prompt += f"\\n[웹 검색 정보]\\n{web_results}\\n"
+            prompt += f"\n[웹 검색 정보]\n{web_results}\n"
 
         if search_mode == "심층 리서치":
-            prompt += f"\\n위 정보를 바탕으로 '{query}'에 대해 다음 항목을 포함한 심층 분석 보고서를 작성해주세요:\\n1. 핵심 요약\\n2. 주요 근거 및 배경 정보\\n3. 전략적 시사점 및 제언"
+            prompt += f"\n위 정보를 바탕으로 '{query}'에 대해 다음 항목을 포함한 심층 분석 보고서를 작성해주세요:\n1. 핵심 요약\n2. 주요 근거 및 배경 정보\n3. 전략적 시사점 및 제언"
         else:
-            prompt += f"\\n위 정보를 바탕으로 '{query}'에 답변해 주세요."
+            prompt += f"\n위 정보를 바탕으로 '{query}'에 답변해 주세요."
 
         response = llm.invoke(prompt)
         st.markdown("### 💬 GPT 응답")
@@ -124,10 +121,3 @@ if query:
 
     except Exception as e:
         st.error(f"❌ 오류 발생: {e}")
-'''
-
-app_code_full_path = "/mnt/data/app_full_doc_ocr_duck.py"
-with open(app_code_full_path, "w", encoding="utf-8") as f:
-    f.write(app_code_full)
-
-app_code_full_path
