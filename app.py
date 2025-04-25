@@ -79,8 +79,11 @@ if uploaded_file:
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(uploaded_file.getvalue())
         tmp_path = tmp.name
-    if load_and_split_file(tmp_path, suffix):
-        st.success("✅ 파일이 자동으로 벡터화되어 학습되었습니다.")
+    success = load_and_split_file(tmp_path, suffix)
+    if success:
+        st.success(f"✅ 벡터 DB에 문서가 성공적으로 저장되었습니다 ({suffix})")
+    else:
+        st.warning(f"⚠️ 텍스트 추출에 실패하여 문서가 벡터화되지 않았습니다. 다른 파일을 시도해보세요.")
 
 query = st.text_input("❓ 질문을 입력하세요")
 use_web = st.checkbox("🌐 웹 검색도 포함할까요? (DuckDuckGo 기반)", value=False)
@@ -88,12 +91,16 @@ search_mode = st.radio("검색 모드", ["일반 검색", "심층 리서치"], h
 
 if query:
     try:
+        doc_context = ""
         if os.path.exists(DB_PATH):
             db = FAISS.load_local(DB_PATH, embedding)
             docs = db.similarity_search(query, k=5)
-            doc_context = "\n\n".join([doc.page_content for doc in docs])
+            if docs:
+                doc_context = "\n\n".join([doc.page_content for doc in docs])
+            else:
+                doc_context = "(유사 문서 없음)"
         else:
-            doc_context = "(문서 없음)"
+            doc_context = "(벡터 DB 없음)"
 
         # DuckDuckGo 검색
         web_results = ""
@@ -105,7 +112,6 @@ if query:
             except Exception as e:
                 web_results = f"(웹 검색 실패: {e})"
 
-        # 프롬프트 구성
         prompt = f"[문서 기반 정보]\n{doc_context}\n"
         if use_web:
             prompt += f"\n[웹 검색 정보]\n{web_results}\n"
@@ -118,6 +124,5 @@ if query:
         response = llm.invoke(prompt)
         st.markdown("### 💬 GPT 응답")
         st.write(response.content)
-
     except Exception as e:
         st.error(f"❌ 오류 발생: {e}")
